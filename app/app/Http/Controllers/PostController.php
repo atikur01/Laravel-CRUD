@@ -59,14 +59,33 @@ class PostController extends Controller
         return redirect()->route('posts.index')->with('success', 'Post updated successfully.');
     }
 
-    public function destroy(Post $post)
+    public function destroy(Request $request, Post $post)
     {
-        if ($post->image && Storage::disk('public')->exists($post->image)) {
-            Storage::disk('public')->delete($post->image);
+        try {
+            // যদি ইমেজ File থাকে এবং তুমি চাইলে ডিলেট করতে পারো:
+            if ($post->image && \Storage::exists($post->image)) {
+                \Storage::delete($post->image);
+            }
+
+            $post->delete();
+
+            $message = 'Post deleted successfully.';
+
+            // If AJAX request (fetch expects JSON)
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => true, 'message' => $message], 200);
+            }
+
+            return redirect()->route('posts.index')->with('success', $message);
+        } catch (\Exception $e) {
+            //Log::error('Post delete error: '.$e->getMessage());
+
+            $message = 'Failed to delete the post. Try again.';
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 500);
+            }
+
+            return redirect()->route('posts.index')->with('error', $message);
         }
-
-        $post->delete();
-
-        return redirect()->route('posts.index')->with('success', 'Post deleted successfully.');
     }
 }
